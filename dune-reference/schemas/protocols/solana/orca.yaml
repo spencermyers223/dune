@@ -1,0 +1,98 @@
+# Orca - Solana DEX Protocol Configuration
+
+name: Orca
+chain: solana
+type: dex
+status: verified
+
+# Primary data source
+tables:
+  primary: dex_solana.trades
+  alternatives:
+    - dex_solana.bot_trades
+
+# Filter values for WHERE clauses
+filters:
+  project: "whirlpool"  # IMPORTANT: Orca uses "whirlpool" not "orca"
+  project_variants:
+    - "whirlpool"  # Orca's concentrated liquidity AMM
+
+# Column mappings
+columns:
+  trader: trader_id
+  volume: amount_usd
+  timestamp: block_time
+  date: block_date
+  pair: token_pair
+
+# Important notes
+gotchas:
+  - "CRITICAL: Orca is listed as 'whirlpool' NOT 'orca' in dex_solana.trades"
+  - "Whirlpool is Orca's concentrated liquidity (CLMM) implementation"
+  - "There is no separate 'orca' project value - only 'whirlpool'"
+  - "Query WHERE project = 'whirlpool' for all Orca volume"
+  - "Jupiter trades through Orca appear here as 'whirlpool'"
+
+# Ready-to-use queries
+common_queries:
+  daily_volume: |
+    SELECT
+      block_date,
+      SUM(amount_usd) AS daily_volume,
+      COUNT(*) AS trade_count,
+      COUNT(DISTINCT trader_id) AS unique_traders
+    FROM dex_solana.trades
+    WHERE project = 'whirlpool'  -- Orca = whirlpool
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  unique_traders: |
+    SELECT COUNT(DISTINCT trader_id) AS unique_traders
+    FROM dex_solana.trades
+    WHERE project = 'whirlpool'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+
+  top_pairs: |
+    SELECT
+      token_pair,
+      SUM(amount_usd) AS volume,
+      COUNT(*) AS trades,
+      COUNT(DISTINCT trader_id) AS traders
+    FROM dex_solana.trades
+    WHERE project = 'whirlpool'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY token_pair
+    ORDER BY volume DESC
+    LIMIT 20
+
+  weekly_volume: |
+    SELECT
+      DATE_TRUNC('week', block_date) AS week_start,
+      SUM(amount_usd) AS weekly_volume,
+      COUNT(*) AS trade_count
+    FROM dex_solana.trades
+    WHERE project = 'whirlpool'
+      AND block_date >= CURRENT_DATE - INTERVAL '84' DAY  -- 12 weeks
+    GROUP BY DATE_TRUNC('week', block_date)
+    ORDER BY week_start DESC
+
+  compare_to_raydium: |
+    SELECT
+      block_date,
+      project,
+      SUM(amount_usd) AS daily_volume
+    FROM dex_solana.trades
+    WHERE project IN ('whirlpool', 'raydium')
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date, project
+    ORDER BY block_date DESC, project
+
+# Documentation links
+references:
+  dune_table: "https://dune.com/data/dex_solana.trades"
+  github: "https://github.com/duneanalytics/spellbook/tree/main/dbt_subprojects/solana/models/_sector/dex"
+  protocol_docs: "https://docs.orca.so/"
+  api: "https://api.orca.so/"
+
+last_verified: "2025-01-17"

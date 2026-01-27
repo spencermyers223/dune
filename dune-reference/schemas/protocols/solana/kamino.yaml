@@ -1,0 +1,115 @@
+# Kamino Finance - Solana Lending & Liquidity Protocol Configuration
+
+name: Kamino Finance
+chain: solana
+type: lending
+status: unverified  # Solana lending tables need verification
+
+# Primary data source
+tables:
+  primary: null  # No confirmed kamino-specific table
+  alternatives:
+    - lending.supply   # May not include Solana/Kamino
+    - lending.borrow   # May not include Solana/Kamino
+    - dex_solana.trades  # For Kamino's liquidity vaults
+
+# Filter values
+filters:
+  project: "kamino"  # Unverified in lending tables
+
+# Important notes
+gotchas:
+  - "Kamino has multiple products: Lending (K-Lend), Liquidity (vaults), Multiply"
+  - "The lending spellbook may NOT include Solana protocols like Kamino"
+  - "For Kamino lending data, likely need to use their API"
+  - "Kamino liquidity vaults interact with DEXs - may appear in dex_solana.trades"
+  - "KMNO token for governance - can track transfers"
+  - "Check lending.supply with blockchain='solana' but may return no results"
+
+# Test queries to verify coverage
+verification_queries:
+  check_lending_coverage: |
+    -- Test if Kamino is in lending spellbook
+    SELECT DISTINCT project
+    FROM lending.supply
+    WHERE blockchain = 'solana'
+    LIMIT 50
+    -- If this returns results, look for 'kamino'
+    -- If empty, Solana lending is not covered
+
+  check_lending_borrow: |
+    -- Test borrow coverage
+    SELECT DISTINCT project
+    FROM lending.borrow
+    WHERE blockchain = 'solana'
+    LIMIT 50
+
+# Potential queries (IF coverage exists)
+potential_queries:
+  lending_deposits: |
+    -- Only works if Kamino is in lending spellbook
+    SELECT
+      block_date,
+      SUM(amount_usd) AS deposits
+    FROM lending.supply
+    WHERE project = 'kamino'
+      AND blockchain = 'solana'
+      AND block_time >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  lending_borrows: |
+    -- Only works if Kamino is in lending spellbook
+    SELECT
+      block_date,
+      SUM(amount_usd) AS borrows
+    FROM lending.borrow
+    WHERE project = 'kamino'
+      AND blockchain = 'solana'
+      AND block_time >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  kmno_token_activity: |
+    -- Track KMNO governance token activity
+    SELECT
+      block_date,
+      SUM(amount_usd) AS volume,
+      COUNT(*) AS trades
+    FROM dex_solana.trades
+    WHERE (token_bought_symbol = 'KMNO' OR token_sold_symbol = 'KMNO')
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+# Alternative data sources
+alternatives:
+  kamino_api:
+    description: "Kamino API for lending and vault data"
+    endpoint: "https://api.kamino.finance"
+    docs: "https://docs.kamino.finance"
+
+  defi_llama:
+    description: "DeFi Llama for TVL tracking"
+    url: "https://defillama.com/protocol/kamino"
+
+  kamino_dashboard:
+    description: "Official Kamino analytics"
+    url: "https://app.kamino.finance/stats"
+
+# Solana lending ecosystem note
+ecosystem_note: |
+  Solana lending protocols (Kamino, Solend, MarginFi) may not be in
+  Dune's lending spellbook, which focuses on EVM chains. For accurate
+  Solana lending data:
+  1. Check lending.supply/borrow with blockchain='solana' first
+  2. If no results, use protocol-specific APIs
+  3. Track lending token activity (kTokens) as a proxy
+
+# Documentation links
+references:
+  protocol_docs: "https://docs.kamino.finance/"
+  api: "https://api.kamino.finance/"
+
+last_verified: "2025-01-17"
+verification_notes: "Solana lending coverage in Dune spellbook unconfirmed"

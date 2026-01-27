@@ -1,0 +1,80 @@
+# Marinade Finance - Solana Liquid Staking Protocol Configuration
+
+name: Marinade Finance
+chain: solana
+type: staking
+status: unverified  # Staking tables need verification
+
+# Primary data source
+tables:
+  primary: null  # No dedicated marinade table confirmed
+  alternatives:
+    - solana.account_activity  # Raw account data
+    - tokens.transfers         # mSOL transfers
+
+# Filter values (if applicable)
+filters:
+  project: "marinade"  # Unverified
+  msol_mint: "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
+
+# Column mappings
+columns:
+  # Depends on which table is used
+  # For token transfers, track mSOL
+
+# Important notes
+gotchas:
+  - "Marinade is a STAKING protocol, not a DEX - different data model"
+  - "Primary metric is mSOL supply/TVL, not trading volume"
+  - "mSOL (liquid staking token) mint: mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
+  - "May need to query token supply/transfers instead of trade tables"
+  - "Dune staking spellbook coverage for Solana is limited"
+  - "Consider using Marinade API for accurate TVL/APY data"
+
+# Potential query approaches
+potential_queries:
+  msol_transfers: |
+    -- Track mSOL token transfers (staking/unstaking proxy)
+    -- Note: This is a workaround, not official staking data
+    SELECT
+      block_date,
+      COUNT(*) AS transfer_count,
+      SUM(amount) AS msol_transferred
+    FROM tokens.transfers
+    WHERE blockchain = 'solana'
+      AND contract_address = 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So'
+      AND block_time >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  msol_dex_volume: |
+    -- mSOL trading volume (stakers selling/buying mSOL)
+    SELECT
+      block_date,
+      SUM(amount_usd) AS volume,
+      COUNT(*) AS trades
+    FROM dex_solana.trades
+    WHERE (token_bought_symbol = 'mSOL' OR token_sold_symbol = 'mSOL')
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+# Alternative data sources
+alternatives:
+  marinade_api:
+    description: "Official Marinade API for TVL and staking data"
+    endpoint: "https://api.marinade.finance"
+    docs: "https://docs.marinade.finance"
+
+  defi_llama:
+    description: "DeFi Llama for TVL tracking"
+    url: "https://defillama.com/protocol/marinade-finance"
+
+# Documentation links
+references:
+  protocol_docs: "https://docs.marinade.finance/"
+  api: "https://api.marinade.finance/"
+  msol_token: "https://solscan.io/token/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
+
+last_verified: "2025-01-17"
+verification_notes: "Staking-specific tables unverified in Dune for Solana"

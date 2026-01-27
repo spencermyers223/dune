@@ -1,0 +1,100 @@
+# Phoenix - Solana DEX Protocol Configuration
+
+name: Phoenix
+chain: solana
+type: dex
+status: verified
+
+# Primary data source
+tables:
+  primary: dex_solana.trades
+  alternatives:
+    - dex_solana.bot_trades
+
+# Filter values for WHERE clauses
+filters:
+  project: "phoenix"
+  project_variants:
+    - "phoenix"
+
+# Column mappings
+columns:
+  trader: trader_id
+  volume: amount_usd
+  timestamp: block_time
+  date: block_date
+  pair: token_pair
+
+# Important notes
+gotchas:
+  - "Project name is lowercase: 'phoenix'"
+  - "Phoenix is a central limit order book (CLOB), not an AMM"
+  - "Order book model means different trading dynamics than AMMs"
+  - "Lower slippage for large trades compared to AMMs"
+  - "Popular for SOL/USDC and major pairs"
+
+# Ready-to-use queries
+common_queries:
+  daily_volume: |
+    SELECT
+      block_date,
+      SUM(amount_usd) AS daily_volume,
+      COUNT(*) AS trade_count,
+      COUNT(DISTINCT trader_id) AS unique_traders
+    FROM dex_solana.trades
+    WHERE project = 'phoenix'
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  unique_traders: |
+    SELECT COUNT(DISTINCT trader_id) AS unique_traders
+    FROM dex_solana.trades
+    WHERE project = 'phoenix'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+
+  top_pairs: |
+    SELECT
+      token_pair,
+      SUM(amount_usd) AS volume,
+      COUNT(*) AS trades,
+      COUNT(DISTINCT trader_id) AS traders
+    FROM dex_solana.trades
+    WHERE project = 'phoenix'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY token_pair
+    ORDER BY volume DESC
+    LIMIT 20
+
+  weekly_volume: |
+    SELECT
+      DATE_TRUNC('week', block_date) AS week_start,
+      SUM(amount_usd) AS weekly_volume,
+      COUNT(*) AS trade_count
+    FROM dex_solana.trades
+    WHERE project = 'phoenix'
+      AND block_date >= CURRENT_DATE - INTERVAL '84' DAY  -- 12 weeks
+    GROUP BY DATE_TRUNC('week', block_date)
+    ORDER BY week_start DESC
+
+  avg_trade_size: |
+    -- Phoenix typically has larger avg trade sizes (CLOB advantage)
+    SELECT
+      block_date,
+      AVG(amount_usd) AS avg_trade_size,
+      PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount_usd) AS median_trade_size,
+      COUNT(*) AS trade_count
+    FROM dex_solana.trades
+    WHERE project = 'phoenix'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+# Documentation links
+references:
+  dune_table: "https://dune.com/data/dex_solana.trades"
+  github: "https://github.com/duneanalytics/spellbook/tree/main/dbt_subprojects/solana/models/_sector/dex"
+  protocol_docs: "https://docs.phoenix.trade/"
+  api: "https://api.phoenix.trade/"
+
+last_verified: "2025-01-17"

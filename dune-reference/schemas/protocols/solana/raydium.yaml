@@ -1,0 +1,103 @@
+# Raydium - Solana DEX Protocol Configuration
+
+name: Raydium
+chain: solana
+type: dex
+status: verified
+
+# Primary data source
+tables:
+  primary: dex_solana.trades
+  alternatives:
+    - dex_solana.bot_trades  # For MEV/bot activity on Raydium
+
+# Filter values for WHERE clauses
+filters:
+  project: "raydium"
+  project_variants:
+    - "raydium"           # Main AMM and CLMM
+    - "raydium_launchlab" # Token launchpad pools
+
+# Column mappings
+columns:
+  trader: trader_id
+  volume: amount_usd
+  timestamp: block_time
+  date: block_date
+  token_in: token_sold_symbol
+  token_out: token_bought_symbol
+  pair: token_pair
+
+# Important notes
+gotchas:
+  - "Project name is lowercase: 'raydium' not 'Raydium'"
+  - "raydium_launchlab is SEPARATE from main raydium - include both for total volume"
+  - "Raydium has both AMM (v4) and CLMM (concentrated liquidity) pools"
+  - "Jupiter trades that route through Raydium appear here under 'raydium'"
+  - "For true Raydium-only volume, this table is accurate"
+
+# Ready-to-use queries
+common_queries:
+  daily_volume: |
+    SELECT
+      block_date,
+      SUM(amount_usd) AS daily_volume,
+      COUNT(*) AS trade_count,
+      COUNT(DISTINCT trader_id) AS unique_traders
+    FROM dex_solana.trades
+    WHERE project = 'raydium'
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  daily_volume_all_raydium: |
+    -- Include launchlab for total Raydium ecosystem volume
+    SELECT
+      block_date,
+      project,
+      SUM(amount_usd) AS daily_volume,
+      COUNT(*) AS trade_count
+    FROM dex_solana.trades
+    WHERE project IN ('raydium', 'raydium_launchlab')
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date, project
+    ORDER BY block_date DESC, project
+
+  unique_traders: |
+    SELECT COUNT(DISTINCT trader_id) AS unique_traders
+    FROM dex_solana.trades
+    WHERE project = 'raydium'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+
+  top_pairs: |
+    SELECT
+      token_pair,
+      SUM(amount_usd) AS volume,
+      COUNT(*) AS trades,
+      COUNT(DISTINCT trader_id) AS traders
+    FROM dex_solana.trades
+    WHERE project = 'raydium'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY token_pair
+    ORDER BY volume DESC
+    LIMIT 20
+
+  weekly_volume: |
+    SELECT
+      DATE_TRUNC('week', block_date) AS week_start,
+      SUM(amount_usd) AS weekly_volume,
+      COUNT(*) AS trade_count
+    FROM dex_solana.trades
+    WHERE project = 'raydium'
+      AND block_date >= CURRENT_DATE - INTERVAL '84' DAY  -- 12 weeks
+    GROUP BY DATE_TRUNC('week', block_date)
+    ORDER BY week_start DESC
+
+# Documentation links
+references:
+  dune_table: "https://dune.com/data/dex_solana.trades"
+  github: "https://github.com/duneanalytics/spellbook/tree/main/dbt_subprojects/solana/models/_sector/dex"
+  protocol_docs: "https://docs.raydium.io/"
+  api: "https://api.raydium.io/"
+
+last_verified: "2025-01-17"

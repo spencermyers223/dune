@@ -1,0 +1,99 @@
+# Jupiter - Solana DEX Aggregator Configuration
+# IMPORTANT: Jupiter has NO DIRECT DUNE COVERAGE
+
+name: Jupiter
+chain: solana
+type: aggregator
+status: no-coverage  # CRITICAL: Jupiter is NOT in Dune
+
+# Primary data source
+tables:
+  primary: null  # No jupiter table exists
+  alternatives: []
+
+# Filter values - DO NOT USE
+filters:
+  project: null  # Jupiter does not appear as a project in dex_solana.trades
+  project_variants: []
+
+# CRITICAL NOTES
+gotchas:
+  - "JUPITER IS NOT IN DUNE - There is no 'jupiter' project in dex_solana.trades"
+  - "Jupiter is an AGGREGATOR that routes trades through other DEXs"
+  - "Jupiter trades appear under the underlying DEX (raydium, whirlpool, meteora, etc.)"
+  - "For 'Jupiter volume' you need to use Jupiter's API directly"
+  - "Dune shows DEX volume, not aggregator volume"
+  - "Do NOT query WHERE project = 'jupiter' - it will return zero results"
+
+# Why Jupiter isn't in Dune
+explanation: |
+  Jupiter is a DEX aggregator, not a DEX. When you swap on Jupiter:
+  1. Jupiter finds the best route across multiple DEXs
+  2. The actual swap happens on underlying DEXs (Raydium, Orca, etc.)
+  3. Dune records the trade under the DEX that executed it
+  4. Jupiter's role is invisible in on-chain data structure Dune uses
+
+  Example: A $1000 SOL->USDC swap on Jupiter might:
+  - Route through Raydium ($600)
+  - Route through Whirlpool ($400)
+  Dune shows: $600 Raydium volume, $400 Whirlpool volume
+  Dune does NOT show: $1000 Jupiter volume
+
+# Alternative approaches
+alternatives:
+  jupiter_api:
+    description: "Use Jupiter's API for aggregator-specific metrics"
+    endpoint: "https://api.jup.ag"
+    docs: "https://station.jup.ag/docs"
+
+  total_solana_volume:
+    description: "Query all DEX volume as a proxy for market activity"
+    query: |
+      -- This shows total Solana DEX volume, not Jupiter-specific
+      SELECT
+        block_date,
+        SUM(amount_usd) AS total_dex_volume,
+        COUNT(*) AS total_trades
+      FROM dex_solana.trades
+      WHERE block_date >= CURRENT_DATE - INTERVAL '30' DAY
+      GROUP BY block_date
+      ORDER BY block_date DESC
+
+  dex_breakdown:
+    description: "See where volume is going (Jupiter routes to these)"
+    query: |
+      SELECT
+        project,
+        SUM(amount_usd) AS volume,
+        COUNT(*) AS trades
+      FROM dex_solana.trades
+      WHERE block_date >= CURRENT_DATE - INTERVAL '7' DAY
+      GROUP BY project
+      ORDER BY volume DESC
+
+# Do NOT use these queries - they will fail
+invalid_queries:
+  wrong_approach_1: |
+    -- THIS WILL RETURN ZERO RESULTS
+    SELECT * FROM dex_solana.trades WHERE project = 'jupiter'
+
+  wrong_approach_2: |
+    -- THERE IS NO SUCH TABLE
+    SELECT * FROM dex_aggregator_solana.trades
+
+# What to tell users asking for Jupiter data
+user_guidance: |
+  When asked for Jupiter metrics, explain:
+  1. Jupiter data is not available in Dune
+  2. For aggregator volume, use Jupiter's API: https://api.jup.ag
+  3. For Solana DEX ecosystem health, query dex_solana.trades (all projects)
+  4. Jupiter's market share = their API volume / total dex_solana.trades volume
+
+# Documentation links
+references:
+  protocol_docs: "https://station.jup.ag/docs"
+  api: "https://api.jup.ag"
+  api_docs: "https://station.jup.ag/docs/apis"
+
+last_verified: "2025-01-17"
+verified_note: "Confirmed no Jupiter project in dex_solana.trades"

@@ -1,0 +1,128 @@
+# Cetus - Sui DEX Protocol Configuration
+# STATUS: NO DUNE COVERAGE
+
+name: Cetus
+chain: sui
+type: dex
+status: no-coverage  # SUI HAS NO DUNE SUPPORT
+
+# Primary data source
+tables:
+  primary: null  # No Dune tables for Sui
+  alternatives: []
+
+# DO NOT USE - No Dune coverage
+filters:
+  project: null
+
+# CRITICAL WARNING
+gotchas:
+  - "SUI HAS NO DUNE COVERAGE - Do not attempt Dune queries"
+  - "Cetus is Sui's largest DEX but not in Dune"
+  - "Use Cetus API for all metrics"
+  - "Any query referencing 'sui' or 'cetus' will fail"
+
+# Why no coverage
+explanation: |
+  Sui blockchain is not indexed in Dune Analytics as of January 2025.
+  There are no tables for:
+  - Sui transactions
+  - Sui DEX trades
+  - Sui protocol data
+
+  This applies to ALL Sui protocols, not just Cetus.
+
+# API Documentation (USE THIS INSTEAD OF DUNE)
+api:
+  graphql: "https://api.mainnet.cetus.zone/v2/graphql"
+  rest_base: "https://api.mainnet.cetus.zone"
+  auth: "No authentication required"
+  rate_limit: "30 req/sec REST, 20 req/sec GraphQL"
+  endpoints:
+    pools: "/pools"
+    swaps: "/swaps"
+    positions: "/positions"
+  data_available:
+    - "TVL"
+    - "24h/7d volume"
+    - "Pool composition"
+    - "LP positions"
+    - "Swap fees"
+  docs: "https://docs.cetus.zone/api"
+
+# Alternative data sources
+alternatives:
+  cetus_sdk:
+    description: "Cetus TypeScript SDK"
+    npm: "@cetusprotocol/cetus-sui-clmm-sdk"
+    docs: "https://cetus-1.gitbook.io/cetus-docs/developer/sdk"
+
+  sui_indexers:
+    - name: "SuiVision"
+      url: "https://suivision.xyz"
+      description: "Block explorer with Cetus pool data"
+
+    - name: "Suiscan"
+      url: "https://suiscan.xyz"
+      description: "Alternative Sui explorer"
+
+  defi_llama:
+    description: "DeFi Llama for TVL"
+    url: "https://defillama.com/protocol/cetus"
+
+# Example API usage (not SQL)
+api_examples:
+  get_pools: |
+    # Python example for Cetus REST API
+    import requests
+
+    response = requests.get("https://api.mainnet.cetus.zone/pools")
+    pools = response.json()
+
+  get_swaps: |
+    # Get recent swaps
+    import requests
+
+    response = requests.get("https://api.mainnet.cetus.zone/swaps")
+    swaps = response.json()
+
+  graphql_query: |
+    # GraphQL example for TVL and volume
+    import requests
+
+    query = """
+    {
+      pools(first: 10, orderBy: tvl, orderDirection: desc) {
+        id
+        tokenA { symbol }
+        tokenB { symbol }
+        tvl
+        volume24h
+      }
+    }
+    """
+    response = requests.post(
+      "https://api.mainnet.cetus.zone/v2/graphql",
+      json={"query": query}
+    )
+    data = response.json()
+
+# Protocol info for research
+protocol_info:
+  type: "Concentrated Liquidity AMM (CLMM)"
+  native_token: "CETUS"
+  launched: "2023"
+  key_features:
+    - "Concentrated liquidity positions"
+    - "Range orders"
+    - "Yield farming"
+    - "Liquidity mining"
+
+# Documentation links
+references:
+  protocol_docs: "https://cetus-1.gitbook.io/cetus-docs/"
+  api_docs: "https://cetus-1.gitbook.io/cetus-docs/developer/api"
+  website: "https://www.cetus.zone/"
+
+last_verified: "2025-01-17"
+verification_notes: "Confirmed no Sui coverage in Dune"

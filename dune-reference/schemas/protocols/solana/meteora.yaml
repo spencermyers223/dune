@@ -1,0 +1,110 @@
+# Meteora - Solana DEX Protocol Configuration
+
+name: Meteora
+chain: solana
+type: dex
+status: verified
+
+# Primary data source
+tables:
+  primary: dex_solana.trades
+  alternatives:
+    - dex_solana.bot_trades
+
+# Filter values for WHERE clauses
+filters:
+  project: "meteora"
+  project_variants:
+    - "meteora"  # All Meteora pools (DLMM, dynamic, stable)
+
+# Column mappings
+columns:
+  trader: trader_id
+  volume: amount_usd
+  timestamp: block_time
+  date: block_date
+  pair: token_pair
+
+# Important notes
+gotchas:
+  - "Project name is lowercase: 'meteora'"
+  - "Meteora has multiple pool types: DLMM (dynamic liquidity), dynamic pools, stable pools"
+  - "All pool types are under a single 'meteora' project value"
+  - "Popular for memecoin launches and volatile pairs"
+  - "DLMM pools are their flagship product (concentrated liquidity)"
+
+# Ready-to-use queries
+common_queries:
+  daily_volume: |
+    SELECT
+      block_date,
+      SUM(amount_usd) AS daily_volume,
+      COUNT(*) AS trade_count,
+      COUNT(DISTINCT trader_id) AS unique_traders
+    FROM dex_solana.trades
+    WHERE project = 'meteora'
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  unique_traders: |
+    SELECT COUNT(DISTINCT trader_id) AS unique_traders
+    FROM dex_solana.trades
+    WHERE project = 'meteora'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+
+  top_pairs: |
+    SELECT
+      token_pair,
+      SUM(amount_usd) AS volume,
+      COUNT(*) AS trades,
+      COUNT(DISTINCT trader_id) AS traders
+    FROM dex_solana.trades
+    WHERE project = 'meteora'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY token_pair
+    ORDER BY volume DESC
+    LIMIT 20
+
+  weekly_volume: |
+    SELECT
+      DATE_TRUNC('week', block_date) AS week_start,
+      SUM(amount_usd) AS weekly_volume,
+      COUNT(*) AS trade_count
+    FROM dex_solana.trades
+    WHERE project = 'meteora'
+      AND block_date >= CURRENT_DATE - INTERVAL '84' DAY  -- 12 weeks
+    GROUP BY DATE_TRUNC('week', block_date)
+    ORDER BY week_start DESC
+
+  new_pairs_24h: |
+    -- Find newly created pairs (first trade in last 24h)
+    WITH pair_first_trade AS (
+      SELECT
+        token_pair,
+        MIN(block_time) AS first_trade
+      FROM dex_solana.trades
+      WHERE project = 'meteora'
+      GROUP BY token_pair
+    )
+    SELECT
+      p.token_pair,
+      p.first_trade,
+      SUM(t.amount_usd) AS total_volume,
+      COUNT(*) AS trade_count
+    FROM pair_first_trade p
+    JOIN dex_solana.trades t ON p.token_pair = t.token_pair
+    WHERE p.first_trade >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+      AND t.project = 'meteora'
+    GROUP BY p.token_pair, p.first_trade
+    ORDER BY total_volume DESC
+    LIMIT 20
+
+# Documentation links
+references:
+  dune_table: "https://dune.com/data/dex_solana.trades"
+  github: "https://github.com/duneanalytics/spellbook/tree/main/dbt_subprojects/solana/models/_sector/dex"
+  protocol_docs: "https://docs.meteora.ag/"
+  api: "https://dlmm-api.meteora.ag/"
+
+last_verified: "2025-01-17"

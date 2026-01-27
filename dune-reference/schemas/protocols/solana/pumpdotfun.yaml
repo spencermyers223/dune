@@ -1,0 +1,148 @@
+# pump.fun - Solana Memecoin Launchpad Configuration
+
+name: pump.fun
+chain: solana
+type: dex
+status: verified
+
+# Primary data source
+tables:
+  primary: dex_solana.trades
+  alternatives:
+    - dex_solana.bot_trades  # Heavy bot activity on pump.fun
+
+# Filter values for WHERE clauses
+filters:
+  project: "pumpdotfun"  # Note: no dot, no space
+  project_variants:
+    - "pumpdotfun"  # Bonding curve phase
+    - "pumpswap"    # Post-graduation AMM (may be separate)
+
+# Column mappings
+columns:
+  trader: trader_id
+  volume: amount_usd
+  timestamp: block_time
+  date: block_date
+  pair: token_pair
+  token_bought: token_bought_symbol
+  token_sold: token_sold_symbol
+
+# Important notes
+gotchas:
+  - "Project name is 'pumpdotfun' (no dot, no space) NOT 'pump.fun'"
+  - "pump.fun uses a bonding curve model - different from AMM mechanics"
+  - "High bot activity - consider filtering or analyzing separately"
+  - "Tokens 'graduate' to Raydium when reaching market cap threshold"
+  - "Post-graduation trades may appear under 'raydium' not 'pumpdotfun'"
+  - "'pumpswap' may be separate project for graduated tokens"
+  - "Many trades are very small (memecoin speculation)"
+
+# Ready-to-use queries
+common_queries:
+  daily_volume: |
+    SELECT
+      block_date,
+      SUM(amount_usd) AS daily_volume,
+      COUNT(*) AS trade_count,
+      COUNT(DISTINCT trader_id) AS unique_traders
+    FROM dex_solana.trades
+    WHERE project = 'pumpdotfun'
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  unique_traders: |
+    SELECT COUNT(DISTINCT trader_id) AS unique_traders
+    FROM dex_solana.trades
+    WHERE project = 'pumpdotfun'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+
+  top_tokens: |
+    -- Top tokens by volume (memecoins)
+    SELECT
+      token_bought_symbol,
+      token_bought_mint_address,
+      SUM(amount_usd) AS volume,
+      COUNT(*) AS trades,
+      COUNT(DISTINCT trader_id) AS traders
+    FROM dex_solana.trades
+    WHERE project = 'pumpdotfun'
+      AND block_date >= CURRENT_DATE - INTERVAL '1' DAY
+      AND token_sold_symbol = 'SOL'  -- Buys with SOL
+    GROUP BY token_bought_symbol, token_bought_mint_address
+    ORDER BY volume DESC
+    LIMIT 50
+
+  new_token_launches: |
+    -- Tokens with first trade in last 24h
+    WITH first_trades AS (
+      SELECT
+        token_bought_mint_address,
+        token_bought_symbol,
+        MIN(block_time) AS first_trade
+      FROM dex_solana.trades
+      WHERE project = 'pumpdotfun'
+        AND token_sold_symbol = 'SOL'
+      GROUP BY token_bought_mint_address, token_bought_symbol
+    )
+    SELECT
+      f.token_bought_symbol,
+      f.token_bought_mint_address,
+      f.first_trade,
+      SUM(t.amount_usd) AS total_volume,
+      COUNT(*) AS trade_count,
+      COUNT(DISTINCT t.trader_id) AS unique_buyers
+    FROM first_trades f
+    JOIN dex_solana.trades t
+      ON f.token_bought_mint_address = t.token_bought_mint_address
+    WHERE f.first_trade >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+      AND t.project = 'pumpdotfun'
+    GROUP BY f.token_bought_symbol, f.token_bought_mint_address, f.first_trade
+    ORDER BY total_volume DESC
+    LIMIT 100
+
+  bot_vs_organic: |
+    -- Compare bot activity on pump.fun
+    SELECT
+      block_date,
+      'bot' AS trade_type,
+      SUM(amount_usd) AS volume,
+      COUNT(*) AS trades
+    FROM dex_solana.bot_trades
+    WHERE project = 'pumpdotfun'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY block_date
+
+    UNION ALL
+
+    SELECT
+      block_date,
+      'all' AS trade_type,
+      SUM(amount_usd) AS volume,
+      COUNT(*) AS trades
+    FROM dex_solana.trades
+    WHERE project = 'pumpdotfun'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC, trade_type
+
+  hourly_activity: |
+    -- Hourly volume pattern (pump.fun has distinct patterns)
+    SELECT
+      DATE_TRUNC('hour', block_time) AS hour,
+      SUM(amount_usd) AS hourly_volume,
+      COUNT(*) AS trades
+    FROM dex_solana.trades
+    WHERE project = 'pumpdotfun'
+      AND block_time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+    GROUP BY DATE_TRUNC('hour', block_time)
+    ORDER BY hour DESC
+
+# Documentation links
+references:
+  dune_table: "https://dune.com/data/dex_solana.trades"
+  protocol_docs: "https://pump.fun"
+  # No official API - use Dune for data
+
+last_verified: "2025-01-17"

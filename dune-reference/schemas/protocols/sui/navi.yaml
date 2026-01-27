@@ -1,0 +1,162 @@
+# Navi Protocol - Sui Lending Protocol Configuration
+# STATUS: NO DUNE COVERAGE
+
+name: Navi Protocol
+chain: sui
+type: lending
+status: no-coverage  # SUI HAS NO DUNE SUPPORT
+
+# Primary data source
+tables:
+  primary: null  # No Dune tables for Sui
+  alternatives: []
+
+# DO NOT USE - No Dune coverage
+filters:
+  project: null
+
+# CRITICAL WARNING
+gotchas:
+  - "SUI HAS NO DUNE COVERAGE - Do not attempt Dune queries"
+  - "Navi is a lending protocol - key metrics are TVL, utilization, APY"
+  - "Use Navi API/SDK for all metrics"
+  - "Even if Sui were supported, lending.supply/borrow may not include it"
+
+# Why no coverage
+explanation: |
+  Sui blockchain is not indexed in Dune Analytics as of January 2025.
+  Lending protocols have specific metrics not always in standard tables:
+  - Supply/Borrow rates
+  - Utilization ratios
+  - Health factors
+  - Liquidation thresholds
+
+# API Documentation (USE THIS INSTEAD OF DUNE)
+api:
+  rest_base: "https://app.naviprotocol.io/api"
+  graphql: "https://navi-indexer.com/graphql"
+  auth: "No authentication required for public data"
+  rate_limit: "50 req/min standard"
+  endpoints:
+    markets: "/markets"
+    assets: "/assets"
+    user_positions: "/user/:address"
+    collateral: "/collateral/:asset"
+  data_available:
+    - "TVL by asset"
+    - "Borrow/lend rates"
+    - "User positions"
+    - "Liquidation data"
+  docs: "https://docs.naviprotocol.io/developers"
+
+# Alternative data sources
+alternatives:
+  navi_sdk:
+    description: "Navi TypeScript SDK"
+    npm: "@navi-protocol/navi-sdk"
+    github: "https://github.com/naviprotocol/navi-sdk"
+
+  defi_llama:
+    description: "DeFi Llama for TVL and yields"
+    url: "https://defillama.com/protocol/navi-protocol"
+    yields_url: "https://defillama.com/yields?project=navi-protocol"
+
+  sui_indexers:
+    - name: "SuiVision"
+      url: "https://suivision.xyz"
+
+    - name: "Suiscan"
+      url: "https://suiscan.xyz"
+
+# Example API/SDK usage (not SQL)
+api_examples:
+  get_markets: |
+    # Python REST API example
+    import requests
+
+    response = requests.get("https://app.naviprotocol.io/api/markets")
+    markets = response.json()
+
+  get_user_positions: |
+    # Get positions for a specific address
+    import requests
+
+    address = "0x..."
+    response = requests.get(f"https://app.naviprotocol.io/api/user/{address}")
+    positions = response.json()
+
+  get_markets_sdk: |
+    # TypeScript SDK example
+    import { NaviSDK } from '@navi-protocol/navi-sdk';
+
+    const navi = new NaviSDK();
+    const markets = await navi.getMarkets();
+    const tvl = await navi.getTVL();
+
+  graphql_query: |
+    # GraphQL example for TVL and rates
+    import requests
+
+    query = """
+    {
+      markets {
+        asset
+        totalSupply
+        totalBorrow
+        supplyAPY
+        borrowAPY
+        utilization
+      }
+    }
+    """
+    response = requests.post(
+      "https://navi-indexer.com/graphql",
+      json={"query": query}
+    )
+    data = response.json()
+
+# Protocol info for research
+protocol_info:
+  type: "Lending Protocol"
+  model: "Pool-based lending (similar to Aave)"
+  native_token: "NAVX"
+  key_features:
+    - "Supply assets to earn yield"
+    - "Borrow against collateral"
+    - "Multiple collateral types"
+    - "Liquidation mechanism"
+  supported_assets:
+    - "SUI"
+    - "USDC"
+    - "USDT"
+    - "wETH"
+    - "Other Sui tokens"
+  key_metrics:
+    - "Total Value Locked (TVL)"
+    - "Total Borrowed"
+    - "Utilization Rate"
+    - "Supply/Borrow APY"
+
+# Typical research queries (via API, not Dune)
+research_metrics:
+  tvl: "SDK: getTVL() or DeFi Llama"
+  utilization: "borrowed / supplied per asset"
+  apy: "SDK: getMarkets() -> supplyAPY, borrowAPY"
+  health_factor: "User-specific, via SDK"
+
+# Compare to EVM lending (which IS in Dune)
+comparison_note: |
+  For EVM lending protocols (Aave, Compound), use Dune:
+  - lending.supply for deposits
+  - lending.borrow for borrows
+
+  For Sui lending (Navi, Scallop), use protocol APIs.
+
+# Documentation links
+references:
+  protocol_docs: "https://docs.naviprotocol.io/"
+  website: "https://naviprotocol.io/"
+  github: "https://github.com/naviprotocol"
+
+last_verified: "2025-01-17"
+verification_notes: "Confirmed no Sui coverage in Dune"

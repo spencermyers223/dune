@@ -1,0 +1,73 @@
+# Protocol Configuration Template
+# Copy this file and rename to {protocol-name}.yaml
+# Place in the appropriate chain folder: protocols/{chain}/{protocol-name}.yaml
+
+name: Protocol Name           # Human-readable name
+chain: solana                 # solana | sui | ethereum | base
+type: dex                     # dex | aggregator | lending | staking | perps | bridge
+status: unverified            # verified | unverified | no-coverage
+
+# Primary data source
+tables:
+  primary: dex_solana.trades  # Main table for this protocol
+  alternatives: []            # Other useful tables
+
+# Filter values for WHERE clauses
+filters:
+  project: "protocol_name"    # Exact value for project column (lowercase)
+  project_variants: []        # If multiple project values exist
+  # Examples:
+  #   project_variants:
+  #     - "raydium"
+  #     - "raydium_launchlab"
+
+# Column name mappings (protocol-specific if different from standard)
+columns:
+  trader: trader_id           # User wallet address column
+  volume: amount_usd          # Volume in USD column
+  timestamp: block_time       # Transaction timestamp
+  date: block_date            # Transaction date (for GROUP BY)
+
+# Important notes and pitfalls
+gotchas:
+  - "Project name is lowercase in queries"
+  # Add protocol-specific gotchas here
+
+# Ready-to-use query examples
+common_queries:
+  daily_volume: |
+    SELECT block_date, SUM(amount_usd) as volume
+    FROM {table}
+    WHERE project = '{project}'
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  unique_traders: |
+    SELECT COUNT(DISTINCT trader_id) as traders
+    FROM {table}
+    WHERE project = '{project}'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+
+  top_pairs: |
+    SELECT
+      token_pair,
+      SUM(amount_usd) as volume,
+      COUNT(*) as trades
+    FROM {table}
+    WHERE project = '{project}'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY token_pair
+    ORDER BY volume DESC
+    LIMIT 20
+
+# Documentation links
+references:
+  dune_table: ""              # Link to Dune data explorer
+  github: ""                  # Link to spellbook source
+  protocol_docs: ""           # Link to protocol documentation
+  api: ""                     # Alternative API if Dune coverage is limited
+
+# Verification tracking
+last_verified: "YYYY-MM-DD"   # Date when queries were last confirmed working
+verified_by: ""               # Who verified (optional)

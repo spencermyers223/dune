@@ -1,0 +1,103 @@
+# Jito - Solana MEV & Liquid Staking Protocol Configuration
+
+name: Jito
+chain: solana
+type: staking  # Also MEV infrastructure
+status: unverified  # MEV and staking tables need verification
+
+# Primary data source
+tables:
+  primary: null  # No dedicated jito table confirmed
+  alternatives:
+    - dex_solana.bot_trades  # MEV/bot activity
+    - tokens.transfers       # JitoSOL transfers
+
+# Filter values
+filters:
+  project: "jito"  # Unverified
+  jitosol_mint: "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+
+# Important notes
+gotchas:
+  - "Jito has TWO products: MEV infrastructure AND liquid staking (JitoSOL)"
+  - "For MEV data, check dex_solana.bot_trades"
+  - "For staking TVL, track JitoSOL token supply/transfers"
+  - "JitoSOL mint: J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+  - "Jito tips/bundles may not be directly queryable in Dune"
+  - "MEV revenue data may require Jito API"
+
+# Potential query approaches
+potential_queries:
+  bot_activity_overview: |
+    -- General MEV/bot activity on Solana (not Jito-specific)
+    SELECT
+      block_date,
+      type AS bot_type,
+      SUM(amount_usd) AS volume,
+      COUNT(*) AS trades,
+      COUNT(DISTINCT bot) AS unique_bots
+    FROM dex_solana.bot_trades
+    WHERE block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY block_date, type
+    ORDER BY block_date DESC, volume DESC
+
+  jitosol_transfers: |
+    -- Track JitoSOL token transfers (staking activity proxy)
+    SELECT
+      block_date,
+      COUNT(*) AS transfer_count,
+      SUM(amount) AS jitosol_transferred
+    FROM tokens.transfers
+    WHERE blockchain = 'solana'
+      AND contract_address = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn'
+      AND block_time >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  jitosol_dex_volume: |
+    -- JitoSOL trading volume
+    SELECT
+      block_date,
+      SUM(amount_usd) AS volume,
+      COUNT(*) AS trades
+    FROM dex_solana.trades
+    WHERE (token_bought_symbol = 'JitoSOL' OR token_sold_symbol = 'JitoSOL')
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  mev_by_type: |
+    -- MEV activity breakdown
+    SELECT
+      type,
+      SUM(amount_usd) AS total_volume,
+      COUNT(*) AS trade_count,
+      AVG(amount_usd) AS avg_trade_size
+    FROM dex_solana.bot_trades
+    WHERE block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY type
+    ORDER BY total_volume DESC
+
+# Alternative data sources
+alternatives:
+  jito_api:
+    description: "Jito API for MEV tips and bundle data"
+    endpoint: "https://jito-labs.gitbook.io/mev"
+    docs: "https://jito-labs.gitbook.io/mev"
+
+  jito_explorer:
+    description: "Jito block explorer for MEV visibility"
+    url: "https://explorer.jito.wtf/"
+
+  defi_llama:
+    description: "DeFi Llama for JitoSOL TVL"
+    url: "https://defillama.com/protocol/jito"
+
+# Documentation links
+references:
+  protocol_docs: "https://jito-labs.gitbook.io/"
+  mev_docs: "https://jito-labs.gitbook.io/mev"
+  jitosol_token: "https://solscan.io/token/J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+
+last_verified: "2025-01-17"
+verification_notes: "MEV-specific Jito data not confirmed in Dune; bot_trades covers general MEV"

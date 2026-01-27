@@ -1,0 +1,137 @@
+# Bluefin - Sui Perpetuals Protocol Configuration
+# STATUS: NO DUNE COVERAGE
+
+name: Bluefin
+chain: sui
+type: perps
+status: no-coverage  # SUI HAS NO DUNE SUPPORT
+
+# Primary data source
+tables:
+  primary: null  # No Dune tables for Sui
+  alternatives: []
+
+# DO NOT USE - No Dune coverage
+filters:
+  project: null
+
+# CRITICAL WARNING
+gotchas:
+  - "SUI HAS NO DUNE COVERAGE - Do not attempt Dune queries"
+  - "Bluefin is a perpetuals DEX, not spot - different data model"
+  - "Use Bluefin API for all metrics"
+  - "Perpetuals have unique metrics: OI, funding rates, liquidations"
+
+# Why no coverage
+explanation: |
+  Sui blockchain is not indexed in Dune Analytics as of January 2025.
+  Even if Sui were supported, perpetuals protocols often need
+  specialized tables beyond standard DEX tables.
+
+  Key perpetuals metrics NOT in standard Dune tables:
+  - Open Interest
+  - Funding rates
+  - Liquidations
+  - Position sizes
+
+# API Documentation (USE THIS INSTEAD OF DUNE)
+api:
+  rest_base: "https://dapi.bluefin.io"
+  websocket: "wss://dapi.bluefin.io/ws"
+  auth: "Public endpoints free, private endpoints need API key + ED25519 signature"
+  rate_limit: "100 req/sec public, 10 req/sec private"
+  endpoints:
+    markets: "/markets"
+    positions: "/positions"
+    trades: "/trades"
+    candles: "/candles"
+    funding: "/funding"
+  data_available:
+    - "24h volume"
+    - "Open interest"
+    - "Funding rates"
+    - "Historical trades"
+    - "OHLCV candles"
+  docs: "https://docs.bluefin.io/developers"
+
+# Alternative data sources
+alternatives:
+  defi_llama:
+    description: "DeFi Llama for TVL and volume"
+    url: "https://defillama.com/protocol/bluefin"
+    derivatives_url: "https://defillama.com/derivatives/bluefin"
+
+  coingecko:
+    description: "CoinGecko derivatives data"
+    url: "https://www.coingecko.com/en/exchanges/bluefin"
+
+# Example API usage (not SQL)
+api_examples:
+  get_markets: |
+    # Python example for Bluefin API
+    import requests
+
+    response = requests.get("https://dapi.bluefin.io/markets")
+    markets = response.json()
+
+  get_funding_rates: |
+    # Get funding rates
+    import requests
+
+    response = requests.get(
+      "https://dapi.bluefin.io/funding",
+      params={"symbol": "BTC-PERP"}
+    )
+    funding = response.json()
+
+  get_candles: |
+    # Get OHLCV candles
+    import requests
+
+    response = requests.get(
+      "https://dapi.bluefin.io/candles",
+      params={"symbol": "BTC-PERP", "interval": "1h", "limit": 100}
+    )
+    candles = response.json()
+
+  websocket_trades: |
+    # WebSocket for real-time trades
+    import websockets
+    import json
+
+    async with websockets.connect("wss://dapi.bluefin.io/ws") as ws:
+        await ws.send(json.dumps({
+          "method": "subscribe",
+          "params": ["trades@BTC-PERP"]
+        }))
+
+# Protocol info for research
+protocol_info:
+  type: "Perpetual Futures DEX"
+  order_type: "Order book (CLOB)"
+  key_features:
+    - "Up to 20x leverage"
+    - "BTC, ETH, SUI perpetuals"
+    - "On-chain settlement"
+    - "Cross-margin"
+  key_metrics:
+    - "Open Interest"
+    - "24h Volume"
+    - "Funding Rate"
+    - "Liquidations"
+
+# Typical research queries (via API, not Dune)
+research_metrics:
+  volume: "GET /marketData -> 24h_volume"
+  open_interest: "GET /marketData -> open_interest"
+  funding_rates: "GET /fundingRate"
+  liquidations: "Requires trade history analysis"
+
+# Documentation links
+references:
+  protocol_docs: "https://docs.bluefin.io/"
+  api_docs: "https://docs.bluefin.io/api-reference"
+  website: "https://bluefin.io/"
+
+last_verified: "2025-01-17"
+verification_notes: "Confirmed no Sui coverage in Dune"

@@ -1,0 +1,97 @@
+# Solana Chain Configuration
+# Reference for Solana-specific Dune patterns
+
+name: Solana
+status: strong-support  # strong-support | partial-support | no-support
+
+# Namespace mappings
+namespaces:
+  dex: dex_solana
+  aggregator: null  # Jupiter not in Dune - use API
+  prices: dex_solana.price_hour
+  bot_trades: dex_solana.bot_trades
+  raw_transactions: solana.transactions
+  raw_account_activity: solana.account_activity
+
+# Query patterns for this chain
+patterns:
+  blockchain_filter: false    # No need to add WHERE blockchain = 'solana'
+  project_case: lowercase     # All project names are lowercase
+  address_column: trader_id   # User address column name
+  timestamp_column: block_time
+  date_column: block_date
+  slot_column: block_slot     # Solana-specific ordering
+
+# Important notes for query writing
+gotchas:
+  - "Jupiter is an AGGREGATOR - trades appear under underlying DEXs (raydium, orca, etc.)"
+  - "There is NO dex_aggregator_solana table - Jupiter data not in Dune"
+  - "All project names are lowercase: 'raydium' not 'Raydium'"
+  - "Use block_slot for Solana-specific transaction ordering"
+  - "trader_id is the wallet address, not 'user' or 'trader'"
+  - "raydium_launchlab is separate from main raydium"
+
+# Known project values in dex_solana.trades
+known_projects:
+  dex:
+    - raydium
+    - raydium_launchlab
+    - whirlpool        # Orca's concentrated liquidity
+    - meteora
+    - phoenix
+    - pumpdotfun
+    - pumpswap
+    - pancakeswap
+    - lifinity
+    - aquifer
+    - goonfi
+    - humidifi
+    - obric
+    - solfi
+    - stabble
+    - tessera
+    - zerofi
+
+  staking:
+    - marinade
+    - jito
+
+  lending:
+    - kamino
+    - solend
+    - marginfi
+
+# Common query patterns
+query_examples:
+  total_dex_volume: |
+    SELECT
+      block_date,
+      SUM(amount_usd) as total_volume,
+      COUNT(*) as trades
+    FROM dex_solana.trades
+    WHERE block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  volume_by_protocol: |
+    SELECT
+      project,
+      SUM(amount_usd) as volume,
+      COUNT(DISTINCT trader_id) as unique_traders
+    FROM dex_solana.trades
+    WHERE block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY project
+    ORDER BY volume DESC
+
+  price_lookup: |
+    SELECT
+      contract_address,
+      symbol,
+      hour,
+      price
+    FROM dex_solana.price_hour
+    WHERE symbol = 'SOL'
+      AND hour >= CURRENT_TIMESTAMP - INTERVAL '1' DAY
+    ORDER BY hour DESC
+
+last_updated: "2025-01-17"
