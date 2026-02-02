@@ -1,0 +1,22 @@
+chain: base
+namespace: base
+
+spellbook:
+  dex: dex.trades
+  transfers: tokens.transfers
+
+patterns:
+  blockchain_filter: "blockchain = 'base'"
+  trader_column: taker
+
+known_projects:
+  dex:
+    - aerodrome
+    - uniswap_v3
+    - baseswap
+
+gotchas:
+  - "Aerodrome is the dominant DEX on Base"
+  - "Base is relatively new, some protocols may lack coverage"
+
+coverage: good

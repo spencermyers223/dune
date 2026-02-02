@@ -1,0 +1,38 @@
+name: Curve
+chain: ethereum
+type: dex
+status: verified
+
+tables:
+  primary: dex.trades
+  alternatives:
+    - curvefi_ethereum.trades
+
+filters:
+  project: "curve"
+
+columns:
+  trader: taker
+  volume: amount_usd
+  timestamp: block_time
+  date: block_date
+
+gotchas:
+  - "Curve specializes in stablecoin swaps"
+  - "Must add blockchain filter"
+  - "Some pools are on other chains (Arbitrum, Polygon)"
+
+common_queries:
+  daily_volume: |
+    SELECT block_date, SUM(amount_usd) as volume
+    FROM dex.trades
+    WHERE project = 'curve'
+      AND blockchain = 'ethereum'
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+references:
+  protocol_docs: "https://curve.readthedocs.io/"
+
+last_verified: "2026-02-02"

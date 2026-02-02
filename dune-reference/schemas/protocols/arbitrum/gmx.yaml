@@ -1,0 +1,38 @@
+name: GMX
+chain: arbitrum
+type: perps
+status: unverified
+
+tables:
+  primary: gmx_arbitrum.trades
+  alternatives:
+    - perpetuals.trades
+
+filters:
+  project: "gmx"
+
+columns:
+  trader: trader
+  volume: volume_usd
+  timestamp: block_time
+  date: block_date
+
+gotchas:
+  - "GMX is perpetuals, not spot DEX"
+  - "Check perpetuals spellbook for standardized data"
+  - "V1 and V2 may have different tables"
+
+common_queries:
+  daily_volume: |
+    SELECT block_date, SUM(volume_usd) as volume
+    FROM perpetuals.trades
+    WHERE project = 'gmx'
+      AND blockchain = 'arbitrum'
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+references:
+  protocol_docs: "https://docs.gmx.io/"
+
+last_verified: "2026-02-02"

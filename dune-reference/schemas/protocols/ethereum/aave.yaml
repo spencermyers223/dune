@@ -1,0 +1,59 @@
+name: Aave
+chain: ethereum
+type: lending
+status: verified
+
+tables:
+  primary: lending.supply
+  alternatives:
+    - lending.borrow
+    - aave_v3_ethereum.flashloans
+
+filters:
+  project: "aave"
+  project_variants:
+    - "aave_v2"
+    - "aave_v3"
+
+columns:
+  user: depositor
+  amount: amount_usd
+  timestamp: block_time
+  date: block_date
+
+gotchas:
+  - "Lending tables use 'depositor' not 'trader'"
+  - "V2 and V3 are separate project values"
+  - "For TVL, sum deposits minus withdrawals"
+
+common_queries:
+  daily_deposits: |
+    SELECT block_date, SUM(amount_usd) as deposits
+    FROM lending.supply
+    WHERE project LIKE 'aave%'
+      AND blockchain = 'ethereum'
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  daily_borrows: |
+    SELECT block_date, SUM(amount_usd) as borrows
+    FROM lending.borrow
+    WHERE project LIKE 'aave%'
+      AND blockchain = 'ethereum'
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  unique_users: |
+    SELECT COUNT(DISTINCT depositor) as users
+    FROM lending.supply
+    WHERE project LIKE 'aave%'
+      AND blockchain = 'ethereum'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+
+references:
+  dune_table: "https://dune.com/data-explorer/ethereum/lending"
+  protocol_docs: "https://docs.aave.com/"
+
+last_verified: "2026-02-02"

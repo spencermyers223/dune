@@ -1,0 +1,28 @@
+chain: arbitrum
+namespace: arbitrum
+
+spellbook:
+  dex: dex.trades
+  perpetuals: perpetuals.trades
+  lending_supply: lending.supply
+  lending_borrow: lending.borrow
+
+patterns:
+  blockchain_filter: "blockchain = 'arbitrum'"
+  trader_column: taker
+
+known_projects:
+  dex:
+    - uniswap_v3
+    - camelot
+    - sushiswap
+    - trader_joe
+  perps:
+    - gmx
+    - gmx_v2
+
+gotchas:
+  - "GMX is perps, not spot DEX - use perpetuals.trades"
+  - "Camelot is Arbitrum-native DEX"
+
+coverage: good

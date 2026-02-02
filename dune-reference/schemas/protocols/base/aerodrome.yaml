@@ -1,0 +1,38 @@
+name: Aerodrome
+chain: base
+type: dex
+status: unverified
+
+tables:
+  primary: dex.trades
+  alternatives:
+    - aerodrome_base.trades
+
+filters:
+  project: "aerodrome"
+
+columns:
+  trader: taker
+  volume: amount_usd
+  timestamp: block_time
+  date: block_date
+
+gotchas:
+  - "Aerodrome is the leading DEX on Base"
+  - "Forked from Velodrome (Optimism)"
+  - "Must add blockchain = 'base' filter"
+
+common_queries:
+  daily_volume: |
+    SELECT block_date, SUM(amount_usd) as volume, COUNT(DISTINCT taker) as traders
+    FROM dex.trades
+    WHERE project = 'aerodrome'
+      AND blockchain = 'base'
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+references:
+  protocol_docs: "https://docs.aerodrome.finance/"
+
+last_verified: "2026-02-02"

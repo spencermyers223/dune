@@ -1,0 +1,54 @@
+name: Uniswap
+chain: ethereum
+type: dex
+status: verified
+
+tables:
+  primary: dex.trades
+  alternatives:
+    - uniswap_v3_ethereum.trades
+    - uniswap_v2_ethereum.trades
+
+filters:
+  project: "uniswap"
+  project_variants:
+    - "uniswap"
+    - "uniswap_v2"
+    - "uniswap_v3"
+
+columns:
+  trader: taker
+  volume: amount_usd
+  timestamp: block_time
+  date: block_date
+
+gotchas:
+  - "Must add blockchain = 'ethereum' filter for dex.trades"
+  - "V2 and V3 have separate project values"
+  - "For all versions combined, use project LIKE 'uniswap%'"
+
+common_queries:
+  daily_volume: |
+    SELECT block_date, SUM(amount_usd) as volume, COUNT(DISTINCT taker) as traders
+    FROM dex.trades
+    WHERE project LIKE 'uniswap%'
+      AND blockchain = 'ethereum'
+      AND block_date >= CURRENT_DATE - INTERVAL '30' DAY
+    GROUP BY block_date
+    ORDER BY block_date DESC
+
+  top_pairs: |
+    SELECT token_pair, SUM(amount_usd) as volume, COUNT(*) as trades
+    FROM dex.trades
+    WHERE project LIKE 'uniswap%'
+      AND blockchain = 'ethereum'
+      AND block_date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY token_pair
+    ORDER BY volume DESC
+    LIMIT 20
+
+references:
+  dune_table: "https://dune.com/data-explorer/ethereum/dex/trades"
+  protocol_docs: "https://docs.uniswap.org/"
+
+last_verified: "2026-02-02"

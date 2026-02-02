@@ -1,0 +1,45 @@
+# Ethereum Chain Configuration
+
+chain: ethereum
+namespace: ethereum
+
+# Spellbook tables (preferred - cross-protocol standardized)
+spellbook:
+  dex: dex.trades
+  lending_supply: lending.supply
+  lending_borrow: lending.borrow
+  nft: nft.trades
+  transfers: tokens.transfers
+  prices: prices.usd
+
+# Common patterns
+patterns:
+  blockchain_filter: "blockchain = 'ethereum'"
+  trader_column: taker  # for dex.trades
+  depositor_column: depositor  # for lending tables
+
+# Known project values (lowercase)
+known_projects:
+  dex:
+    - uniswap
+    - uniswap_v2
+    - uniswap_v3
+    - curve
+    - balancer
+    - sushiswap
+    - 1inch
+  lending:
+    - aave
+    - aave_v2
+    - aave_v3
+    - compound
+    - compound_v3
+    - morpho
+
+gotchas:
+  - "Always add blockchain = 'ethereum' filter on spellbook tables"
+  - "Project names are lowercase"
+  - "V2/V3 versions may be separate project values"
+  - "Use LIKE 'uniswap%' to catch all versions"
+
+coverage: full  # Ethereum has extensive Dune coverage
