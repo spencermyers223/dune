@@ -207,9 +207,48 @@ alternatives:
     navi: "https://app.naviprotocol.io/api"
     scallop: "https://sui.apis.scallop.io"
 
+# Walrus Decentralized Storage
+# Community dataset for Walrus storage network on Sui
+walrus:
+  namespace: sui_walrus
+  tables:
+    base_table:
+      columns:
+        - ts_register          # Timestamp when blob was registered
+        - block_date           # Date partition column (use for WHERE filtering)
+        - size_mb              # Size of stored blob in megabytes
+        - blob_id              # Unique blob identifier
+        - storage_node         # Node that stored the blob
+        - owner                # Address that owns the blob
+        - epochs_stored        # Number of epochs paid for storage
+      notes: "Main Walrus storage table - use for tracking storage activity"
+
+  query_examples:
+    daily_storage_events: |
+      SELECT
+          date_trunc('day', ts_register) as day,
+          COUNT(*) as storage_events,
+          SUM(size_mb) as total_mb_stored
+      FROM sui_walrus.base_table
+      WHERE block_date >= CURRENT_DATE - INTERVAL '90' day
+      GROUP BY 1
+      ORDER BY 1 DESC
+
+    storage_by_owner: |
+      SELECT
+          owner,
+          COUNT(*) as blob_count,
+          SUM(size_mb) as total_mb
+      FROM sui_walrus.base_table
+      WHERE block_date >= CURRENT_DATE - INTERVAL '30' day
+      GROUP BY 1
+      ORDER BY 3 DESC
+      LIMIT 20
+
 notes:
   - "Sui has PARTIAL Dune support - raw tables work, no spellbooks"
   - "Use sui.events + package filter for protocol-specific metrics"
   - "Package IDs sourced from official SDKs (Cetus, NAVI, Scallop)"
+  - "Walrus storage data available via sui_walrus.base_table community dataset"
 
-last_updated: "2026-02-03"
+last_updated: "2026-02-04"
