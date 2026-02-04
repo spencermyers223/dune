@@ -6,7 +6,7 @@ status: partial-support  # strong-support | partial-support | no-support
 
 # What's available
 coverage:
-  raw_tables: true        # sui.transactions, sui.events, etc. ARE accessible
+  raw_tables: true        # sui.transactions, sui.events, sui.objects accessible
   curated_spellbooks: false  # No dex_sui.trades, lending.*, prices.* for Sui
   community_datasets: true   # 50+ community datasets available
 
@@ -21,29 +21,100 @@ namespaces:
   raw_move_calls: sui.move_call
   raw_checkpoints: sui.checkpoints
 
-# Raw table schemas (verified)
+# Raw table schemas (verified from Dune docs)
 raw_tables:
   sui.transactions:
     columns:
-      - transaction_digest
-      - checkpoint
-      - epoch
-      - timestamp_ms
-      - date
-      - sender
-    notes: "Main transaction table - use for DAU, tx counts. NO volume/value columns - for volume data use DefiLlama API or decode sui.events"
+      - transaction_digest    # Unique hash identifier
+      - checkpoint            # Checkpoint sequence number
+      - epoch                 # Epoch number
+      - timestamp_ms          # Unix timestamp in milliseconds
+      - date                  # Date partition column
+      - sender                # Address that initiated (binary)
+      - transaction_kind      # "ProgrammableTransaction", "ChangeEpoch", etc.
+      - is_system_txn         # Boolean
+      - execution_success     # Boolean
+      - packages              # Packages involved
+      - move_calls            # Number of Move calls
+      - total_gas_cost        # Gas spent
+      - created               # Objects created count
+      - mutated               # Objects mutated count
+      - deleted               # Objects deleted count
+    notes: "Main transaction table - use for DAU, tx counts. NO volume/value columns"
 
   sui.events:
-    columns: []  # Needs verification
-    notes: "Raw blockchain events"
+    columns:
+      - transaction_digest    # Hash of tx that emitted event
+      - event_index           # Index within transaction
+      - checkpoint            # Checkpoint sequence number
+      - epoch                 # Epoch number
+      - timestamp_ms          # Unix timestamp in milliseconds
+      - date                  # Date partition column
+      - sender                # Sender address (binary)
+      - package               # Package ID that emitted (binary)
+      - module                # Module name
+      - event_type            # Type of event
+      - event_json            # JSON representation of event data
+      - bcs                   # Binary Canonical Serialization
+    notes: "Filter by package + event_type for protocol-specific data"
 
   sui.objects:
-    columns: []  # Needs verification
-    notes: "Sui objects/state"
+    columns:
+      - object_id             # Unique object ID (binary)
+      - version               # Version number
+      - digest                # Hash of object contents
+      - type_                 # Object type string
+      - checkpoint            # Checkpoint sequence number
+      - epoch                 # Epoch number
+      - timestamp_ms          # Unix timestamp
+      - date                  # Date partition
+      - owner_type            # "AddressOwner", "ObjectOwner", "Shared", "Immutable"
+      - owner_address         # Owner address (binary)
+      - object_status         # "Created", "Mutated", "Deleted"
+      - coin_type             # Type of coin (if coin object)
+      - coin_balance          # Balance (if coin object)
+      - object_json           # JSON representation
+    notes: "Use for coin balances, NFT tracking, protocol state"
 
-  sui.move_call:
-    columns: []  # Needs verification
-    notes: "Move function calls - useful for protocol-specific analysis"
+# Protocol Package IDs (VERIFIED - use in FROM_HEX())
+protocol_packages:
+  deepbook:
+    package_id: "0x000000000000000000000000000000000000000000000000000000000000dee9"
+    short_id: "0xdee9"
+    notes: "Native CLOB - central liquidity layer"
+    
+  cetus:
+    clmm_pool: "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb"
+    config: "0x95b8d278b876cae22206131fb9724f701c9444515813042f54f0a426c9a3bc2f"
+    global_config: "0xdaa46292632c3c4d8f31f23ea0f9b36a28ff3677e9684980e4438403a67a3d8f"
+    notes: "Top DEX volume, concentrated liquidity"
+    
+  navi:
+    protocol: "0xee0041239b89564ce870a7dec5ddc5d114367ab94a1137e90aa0633cb76518e0"
+    storage: "0xbb4e2f4b6205c2e2a2db47aeb4f830796ec7c005f88537ee775986639bc442fe"
+    notes: "Top TVL lending protocol"
+    
+  scallop:
+    protocol: "0xb03fa00e2d9f17d78a9d48bd94d8852abec68c19d55e819096b1e062e69bfad1"
+    market: "0xa7f41efe3b551c20ad6d6cea6ccd0fd68d2e2eaaacdca5e62d956209f6a51312"
+    notes: "Major lending protocol"
+
+# Token Addresses (coin types)
+token_addresses:
+  SUI: "0x2::sui::SUI"
+  DEEP: "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP"
+  CETUS: "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS"
+  NAVX: "0xa99b8952d4f7d947ea77fe0ecdcc9e5fc0bcab2841d6e2a5aa00c3044e5544b5::navx::NAVX"
+  SCA: "0x7016aae72cfc67f2fadf55769c0a7dd54291a583b63051a5ed71081cce836ac6::sca::SCA"
+  BUCK: "0xce7ff77a83ea0cb6fd39bd8748e2ec89a3f41e8efdc3f4eb123e0ca37b184db2::buck::BUCK"
+  WAL: "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL"
+  IKA: "0x7262fb2f7a3a14c888c438a3cd9b912469a58cf60f367352c46584262e8299aa::ika::IKA"
+  SEND: "0xb45fcfcc2cc07ce0702cc2d229621e046c906ef14d9b25e8e4d25f6e8763fef7::send::SEND"
+  TURBOS: "0x5d1f47ea69bb0de31c313d7acf89b890dbb8991ea8e03c6c355171f84bb1ba4a::turbos::TURBOS"
+  haSUI: "0xbde4ba4c2e274a60ce15c1cfff9e5c42e41654ac8b6d906a57efa4bd3c29f47d::hasui::HASUI"
+  vSUI: "0x549e8b69270defbfafd4f94e17ec44cdbdd99820b33bda2278dea3b9a32d3f55::cert::CERT"
+  USDC: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC"
+  USDT: "0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c::coin::COIN"
 
 # Query patterns for this chain
 patterns:
@@ -51,128 +122,94 @@ patterns:
   address_column: sender      # In sui.transactions
   timestamp_column: date      # Date column (also timestamp_ms for ms precision)
   date_column: date
+  package_filter: "FROM_HEX('...')"  # Use FROM_HEX() for package binary comparison
 
 # Important notes for query writing
 gotchas:
-  - "Raw tables ARE accessible - sui.transactions, sui.events work"
+  - "Package IDs must use FROM_HEX() for binary comparison"
   - "NO curated spellbooks - no dex_sui.trades, no prices.usd for Sui"
   - "sui.transactions does NOT contain volume/value data - only tx metadata"
-  - "For volume data, use DefiLlama API or decode sui.events transfer amounts"
+  - "For volume/trade data, filter sui.events by protocol package + event_type"
   - "Use INTERVAL 'X' DAY syntax (not WEEK)"
-  - "Community datasets available for protocols (Bluefin, DeepBook, Scallop)"
-  - "For TVL data, use DefiLlama API - not available in Dune"
-  - "Protocol-specific trades require parsing raw events or community datasets"
+  - "Timestamps are in milliseconds - divide by 1000 for seconds"
+  - "Objects have coin_balance for tracking token holdings"
 
-# Protocol coverage in Dune
-known_protocols:
-  dex:
-    - name: Cetus
-      dune_coverage: community-datasets-only
-      api: "https://api.mainnet.cetus.zone"
-      docs: "https://docs.cetus.zone/api"
-
-    - name: DeepBook
-      dune_coverage: community-datasets-only
-      community_tables:
-        - "0xhipo - deepbook_pools_params"
-        - "0xhipo - deepbook_market_info"
-      docs: "https://docs.sui.io/guides/developer/app-examples/deepbook"
-
-  perps:
-    - name: Bluefin
-      dune_coverage: community-datasets-only
-      community_tables:
-        - "openblo... - bluefin_account_event"
-      api: "https://dapi.bluefin.io"
-      docs: "https://docs.bluefin.io/developers"
-
-  lending:
-    - name: Navi
-      dune_coverage: community-datasets-only
-      api: "https://app.naviprotocol.io/api"
-      docs: "https://docs.naviprotocol.io/developers"
-
-    - name: Scallop
-      dune_coverage: community-datasets-only
-      community_tables:
-        - "sc_research - sui_collateral_value"
-        - "sc_research - sui_deposit_value"
-        - "sc_research - sui_staking"
-      docs: "https://docs.scallop.io"
-
-# Community datasets (most useful)
-community_datasets:
-  price_data:
-    - "dune.dourol.pyth_price_feed_txn_sui (11.41 GB)"
-    - "dune.miladzm71.suipricetable"
-    - "dune.index_.sui_oracle_historical_pri"
-
-  network_analytics:
-    - "dune.fourpillars.sui_network"
-    - "dune.fourpillars.sui_validators"
-
-  user_analytics:
-    - "dune.goodheat.sui_wallet_data"
-    - "dune.goodheat.sui_new_user_info"
-
-# Example queries
+# Query examples with package IDs
 query_examples:
+  cetus_swaps: |
+    SELECT 
+      DATE_TRUNC('day', FROM_UNIXTIME(timestamp_ms/1000)) as date,
+      event_type,
+      COUNT(*) as swap_count
+    FROM sui.events  
+    WHERE package = FROM_HEX('1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb')
+      AND event_type LIKE '%Swap%'
+      AND date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY 1, 2
+    ORDER BY 1 DESC
+
+  deepbook_activity: |
+    SELECT 
+      DATE_TRUNC('day', FROM_UNIXTIME(timestamp_ms/1000)) as date,
+      module,
+      event_type,
+      COUNT(*) as events
+    FROM sui.events
+    WHERE package = FROM_HEX('000000000000000000000000000000000000000000000000000000000000dee9')
+      AND date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY 1, 2, 3
+    ORDER BY 1 DESC, 4 DESC
+
+  navi_lending: |
+    SELECT 
+      DATE_TRUNC('day', FROM_UNIXTIME(timestamp_ms/1000)) as date,
+      module,
+      event_type,
+      COUNT(*) as events
+    FROM sui.events
+    WHERE package = FROM_HEX('ee0041239b89564ce870a7dec5ddc5d114367ab94a1137e90aa0633cb76518e0')
+      AND date >= CURRENT_DATE - INTERVAL '7' DAY
+    GROUP BY 1, 2, 3
+    ORDER BY 1 DESC, 4 DESC
+
   daily_transactions: |
     SELECT
       DATE_TRUNC('day', date) AS day,
-      COUNT(*) AS tx_count
+      COUNT(*) AS tx_count,
+      COUNT(DISTINCT sender) AS unique_users
     FROM sui.transactions
     WHERE date >= CURRENT_DATE - INTERVAL '30' DAY
-    GROUP BY DATE_TRUNC('day', date)
+    GROUP BY 1
     ORDER BY day DESC
 
-  weekly_active_users: |
-    SELECT
-      DATE_TRUNC('week', date) AS week_start,
-      COUNT(DISTINCT sender) AS weekly_active_users
-    FROM sui.transactions
-    WHERE date >= CURRENT_DATE - INTERVAL '365' DAY
-    GROUP BY DATE_TRUNC('week', date)
-    ORDER BY week_start ASC
+  token_balances: |
+    SELECT 
+      coin_type,
+      SUM(coin_balance) as total_balance,
+      COUNT(*) as holder_count
+    FROM sui.objects
+    WHERE coin_type IS NOT NULL
+      AND object_status = 'Created'
+      AND owner_type = 'AddressOwner'
+    GROUP BY 1
+    ORDER BY 2 DESC
+    LIMIT 20
 
-  weekly_transactions: |
-    SELECT
-      DATE_TRUNC('week', date) AS week_start,
-      COUNT(*) AS weekly_transactions
-    FROM sui.transactions
-    WHERE date >= CURRENT_DATE - INTERVAL '365' DAY
-    GROUP BY DATE_TRUNC('week', date)
-    ORDER BY week_start ASC
-
-# Alternative data sources (for data not in Dune)
+# Alternative data sources
 alternatives:
   tvl_data:
     source: "DefiLlama API"
     endpoint: "https://api.llama.fi/v2/historicalChainTvl/Sui"
-    notes: "No TVL tables in Dune for Sui - use DefiLlama"
-
-  indexers:
-    - name: Sui Indexer
-      url: "https://docs.sui.io/guides/developer/getting-started/sui-indexer"
-      description: "Official Sui indexer for transaction data"
-
-    - name: SuiVision
-      url: "https://suivision.xyz"
-      description: "Block explorer with API access"
-
-    - name: Suiscan
-      url: "https://suiscan.xyz"
-      description: "Alternative block explorer"
+    notes: "No TVL tables in Dune for Sui"
 
   protocol_apis:
-    cetus: "https://api.mainnet.cetus.zone"
-    bluefin: "https://dapi.bluefin.io"
+    cetus: "https://api-sui.cetus.zone"
     navi: "https://app.naviprotocol.io/api"
+    scallop: "https://sui.apis.scallop.io"
 
 notes:
   - "Sui has PARTIAL Dune support - raw tables work, no spellbooks"
-  - "For protocol-specific metrics, combine raw tables + community datasets + APIs"
-  - "Community datasets use format: dune.creator_name.table_name"
-  - "See schemas/sui.md for full list of available tables and datasets"
+  - "Use sui.events + package filter for protocol-specific metrics"
+  - "Package IDs sourced from official SDKs (Cetus, NAVI, Scallop)"
 
-last_updated: "2025-01-17"
+last_updated: "2026-02-03"

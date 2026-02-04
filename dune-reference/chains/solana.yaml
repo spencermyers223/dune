@@ -34,9 +34,11 @@ gotchas:
 # Known project values in dex_solana.trades
 known_projects:
   dex:
+    - jupiter          # DEX aggregator - trades DO appear in dex_solana.trades
     - raydium
     - raydium_launchlab
     - whirlpool        # Orca's concentrated liquidity
+    - orca             # Alternative name for Orca
     - meteora
     - phoenix
     - pumpdotfun
@@ -44,6 +46,7 @@ known_projects:
     - pancakeswap
     - lifinity
     - aquifer
+    - drift            # Perps DEX
     - goonfi
     - humidifi
     - obric
@@ -55,11 +58,25 @@ known_projects:
   staking:
     - marinade
     - jito
+    - sanctum
 
   lending:
     - kamino
     - solend
     - marginfi
+
+  oracle:
+    - pyth
+
+# IDL Decoded Tables (protocol-specific)
+# Pattern: <namespace>_solana.<program>_call_<instruction>
+idl_decoded_tables:
+  whirlpool: "whirlpool_solana.*"  # Orca concentrated liquidity
+  jupiter: "jupiter_solana.*"      # Aggregator
+  raydium: "raydium_solana.*"      # AMM DEX
+  marinade: "marinade_solana.*"    # Liquid staking
+  jito: "jito_solana.*"            # MEV + liquid staking
+  drift: "drift_solana.*"          # Perps
 
 # Common query patterns
 query_examples:
